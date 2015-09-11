@@ -29,12 +29,29 @@ class Worker:
         id_list = [elem.attrib['value'] for elem in input_list]
         print id_list
         return id_list
-        
-    def buildFavProfile(self, fav_id_list):
+    
+    def getMemberProfile(self, member_id):
+        resp = self.session.get(self.member_illust_url + member_id)        
+    
+    def buildFavProfiles(self, fav_id_list):
         pass
         
-    def download(self):
+    def download(self, url, path):
+        if (path[len(path) - 1] != os.sep):
+            path += os.sep
+        if not os.path.exists(path):
+            os.makedirs(path)
+        # todo: fix path
+        if os.path.isfile(path):
+            return True
+        # todo: handle failure
+        data = self.session.get(url).read()
+        self.saveFile(data, path)
+        return True
+        
+    def saveFile(self, data, path):
         pass
+        
         
 class Member:
     def __init__(self):
@@ -51,4 +68,3 @@ class Manga:
 class Ugoriha:
     def __init__(self):
         pass
-        
