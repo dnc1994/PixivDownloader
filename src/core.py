@@ -1,7 +1,7 @@
 """
-1. ORM
-2. Cache
-3. Exception handling
+TODO
+1. ORM/Cache
+2. Exception handling
 """
 
 import os
@@ -10,7 +10,7 @@ from pyquery import PyQuery as pq
 
 class Worker:
     def __init__(self):
-        self.session = requests.Session()
+        self.req = requests.Session()
         self.login_url = 'https://www.secure.pixiv.net/login.php'
         self.fav_list_url = 'http://www.pixiv.net/bookmark.php?type=user'
         self.member_url = 'http://www.pixiv.net/member.php?id='
@@ -21,7 +21,7 @@ class Worker:
     def login(self, username, password):
         print 'Login...'
         data = {'mode': 'login', 'pixiv_id': username, 'pass': password, 'skip': 1}
-        resp = self.session.post(url=self.login_url, data=data)
+        resp = self.req.post(url=self.login_url, data=data)
         if resp.text.find('pixiv.user.loggedIn = true') == -1:
             print 'Login Failed'
             return False
@@ -29,7 +29,7 @@ class Worker:
         
     def getFavList(self):
         print 'Getting FavList'
-        resp = self.session.get(self.fav_list_url)
+        resp = self.req.get(self.fav_list_url)
         li_list = pq(resp.text)('#search-result ul li')
         input_list = [elem.getchildren()[0] for elem in li_list]
         id_list = [elem.attrib['value'] for elem in input_list]
@@ -37,7 +37,7 @@ class Worker:
         return id_list
     
     def getMemberProfile(self, member_id):
-        resp = self.session.get(self.member_illust_url + member_id)
+        resp = self.req.get(self.member_illust_url + member_id)
         
     def updateFavProfiles(self, fav_id_list):
         update_list = filter(lambda x: x not in self.metadata['cachedFavList'], fav_id_list)
@@ -48,13 +48,8 @@ class Worker:
         res_list = []
         return res_list
     
-    # define failsafe
-    @failsafe
-    def safeGet(self, url):
-        return self.session.get(url)
-    
     def downloadToFile(self, res, path):
-        # check type
+        assert type(res) == Illust
         url = res.url
         if (path[len(path) - 1] != os.sep):
             path += os.sep
@@ -64,59 +59,62 @@ class Worker:
         if os.path.isfile(path):
             return True
         try:
-            data = safeGet(url)
-            # save file
-            self.saveFile(data, path)
+            data = self.req.get(url)
+            with open(path, 'wb') as f:
+                f.write(data)
             return True
         except:
-            return False
+            return False        
+        
+    def parseRes(self, url):
+        info = {}
+        info['type'] = 'manga' if 'manga' in url else 'illust'
+        resp = self.req.get(url)
+        img = pq(resp.text)('.original-image')[0]
+        title = pq(resp.text)('.work-info h1.title')[0]
+        user = pq(resp.text)('h1.user')[0]
+        info['title'] = title.text
+        info['user'] = user.text
+        info['link'] = img.attrib['data-src']
+        return info
     
-    def downloadRes(self, res_id, path):
-        # check res type (?) and create objects
-        if a:
-            res = Illust(name, url)
-        if b:
-            res = Mange(name, url)
-        if c:
+    # todo
+    def createRes(self, info):
+        if info['type'] == 'illust':
+            pass
+        if info['type'] == 'manga':
+            pass
+    
+    def downloadRes(self, res_url, path):
+        info = parseRes(res_url)
+        res = createRes(info)
         if type(res) == Illust:
             downloadToFile(res, path)
         if type(res) == Manga:
             for illust in res.pages:
-                downloadToFile(res, path)
-        if type(res) == Ugoriha:
-            downloadToFile(res)
+                downloadToFile(illust, path)
     
-    def bulkDownload(self, res_list, path):
-        for res in res_list:
-            downloadRes(res)
-        
+    def bulkDownload(self, res_url_list, path):
+        for res_url in res_url_list:
+            downloadRes(res_url, path)  
         
 class Member:
-    def __init__(self, id):
-        self.member_id = id
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
         
 class Illust:
-    def __init__(self, name, url):
+    def __init__(self, name, url, path):
         self.name = name
         self.url = url
-        self.path = ''
-        self.getProperLink()
-        self.fixPath()
-        
-    def getProperLink(self):
-        # get the link to largest possible illust
-        
-    def fixPath(self):
-        # use author info to fix res.path
+        self.path = os.sep.join(path)
 
 class Manga(Illust):
-    def __init__(self, name, url, path):
-        (super)self.__init__(name, url, path)
-        self.path += self.name os.sep
-        self.pages = []
-        # get page list
+    def __init__(self, name, url, path, pages):
+        super(Manga, self).__init__(name, url, path)
+        self.pages = pages
 
-# figure out the difference        
+# todo        
 class Ugoriha(Illust):
     def __init__(self):
         pass
