@@ -5,6 +5,7 @@ TODO
 """
 
 import os
+import re
 import requests
 from pyquery import PyQuery as pq
 
@@ -33,33 +34,35 @@ class Worker:
         li_list = pq(resp.text)('#search-result ul li')
         input_list = [elem.getchildren()[0] for elem in li_list]
         id_list = [elem.attrib['value'] for elem in input_list]
-        print id_list
         return id_list
     
+    # further todo
     def getMemberProfile(self, member_id):
-        resp = self.req.get(self.member_illust_url + member_id)
-        
+        resp = self.req.get(self.member_illust_url + member_id)        
+    
+    # further todo
     def updateFavProfiles(self, fav_id_list):
         update_list = filter(lambda x: x not in self.metadata['cachedFavList'], fav_id_list)
         for fav in update_list:
             pass
-            
+    
+    # todo
     def getResList(self, member_id):
         res_list = []
         return res_list
     
     def downloadToFile(self, res, path):
         assert type(res) == Illust
-        url = res.url
         if (path[len(path) - 1] != os.sep):
             path += os.sep
         path += res.path
-        if not os.path.exists(path):
-            os.makedirs(path)
         if os.path.isfile(path):
             return True
+        folder_path = ''.join(path.split(os.sep)[:-1])
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
         try:
-            data = self.req.get(url)
+            data = self.req.get(res.url)
             with open(path, 'wb') as f:
                 f.write(data)
             return True
@@ -69,34 +72,48 @@ class Worker:
     def parseRes(self, url):
         info = {}
         info['type'] = 'manga' if 'manga' in url else 'illust'
+        id = re.search(r'id=(\d+)', url).group(1)
         resp = self.req.get(url)
         img = pq(resp.text)('.original-image')[0]
         title = pq(resp.text)('.work-info h1.title')[0]
         user = pq(resp.text)('h1.user')[0]
-        info['title'] = title.text
+        info['title'] = id + '_' + title.text
         info['user'] = user.text
         info['link'] = img.attrib['data-src']
         return info
     
-    # todo
+    def createIllust(self, info, folder=None)
+        filename = info['link'].split('/')[-1]
+        extension = filename[filename.find('.'):]
+        path = [info['user']]
+        if folder:
+            path.append(folder)
+        path.append(info['title'] + extension)
+        return Illust(info['title'], info['link'], path)
+        
     def createRes(self, info):
         if info['type'] == 'illust':
-            pass
+            return self.createIllust(info)
         if info['type'] == 'manga':
-            pass
+            # todo
+            pages_url = []
+            pages_info = [parseRes(page_url) for page_url in pages_url]
+            manga = Manga(info['title'], info['link'], path)
+            manga.pages = [self.createIllust(page_info, info['title']) for page_info in pages_info]            
+            return manga
     
     def downloadRes(self, res_url, path):
         info = parseRes(res_url)
         res = createRes(info)
         if type(res) == Illust:
-            downloadToFile(res, path)
+            self.downloadToFile(res, path)
         if type(res) == Manga:
             for illust in res.pages:
-                downloadToFile(illust, path)
+                self.downloadToFile(illust, path)
     
     def bulkDownload(self, res_url_list, path):
         for res_url in res_url_list:
-            downloadRes(res_url, path)  
+            self.downloadRes(res_url, path)  
         
 class Member:
     def __init__(self, id, name):
@@ -110,7 +127,7 @@ class Illust:
         self.path = os.sep.join(path)
 
 class Manga(Illust):
-    def __init__(self, name, url, path, pages):
+    def __init__(self, name, url, path, pages=None):
         super(Manga, self).__init__(name, url, path)
         self.pages = pages
 
@@ -118,3 +135,4 @@ class Manga(Illust):
 class Ugoriha(Illust):
     def __init__(self):
         pass
+    
