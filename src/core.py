@@ -8,6 +8,7 @@ import os
 import re
 import requests
 from pyquery import PyQuery as pq
+import pickle
 
 class Worker:
     def __init__(self):
@@ -95,7 +96,7 @@ class Worker:
         if info['type'] == 'illust':
             return self.createIllust(info)
         if info['type'] == 'manga':
-            # todo
+            from_url = info['link']
             pages_url = []
             pages_info = [parseRes(page_url) for page_url in pages_url]
             manga = Manga(info['title'], info['link'], path)
@@ -133,6 +134,5 @@ class Manga(Illust):
 
 # todo        
 class Ugoriha(Illust):
-    def __init__(self):
-        pass
-    
+    def __init__(self, name, url, path):
+        super(Ugoriha, self).__init__(name, url, path)
