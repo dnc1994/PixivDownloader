@@ -121,6 +121,9 @@ class Member:
         self.id = id
         self.name = name
         
+    def getWorkList(self):
+        pass
+        
 class Illust:
     def __init__(self, name, url, path):
         self.name = name
